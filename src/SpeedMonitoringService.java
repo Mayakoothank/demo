@@ -1,7 +1,15 @@
+import android.car.Car;
+import android.car.hardware.CarPropertyValue;
+import android.car.hardware.property.CarPropertyManager;
+import android.content.Context;
+import android.util.Log;
 
 public class SpeedMonitoringService extends Service {
-
+    private Car car;
+    private CarPropertyManager carPropertyManager;
+    private Context context;
     private Renter renter;
+    private static final String TAG = "SpeedMonitoringService";	
 
     @Override
     public void onCreate() {
@@ -9,9 +17,11 @@ public class SpeedMonitoringService extends Service {
 		
         renter = new Renter("R12345", 100.0); // Default value will be updated from Firebase
         fetchSpeedLimitFromFirebase(renter.renterId);
-
+	context = this;
+	car = Car.createCar(context);
+        carPropertyManager = (CarPropertyManager) car.getCarManager(Car.PROPERTY_SERVICE);
         // Start monitoring speed
-        monitorSpeed();
+        registerSpeedListener();
     }
 
     @Override
@@ -22,8 +32,9 @@ public class SpeedMonitoringService extends Service {
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        super.onDestroy();   
         // Stop monitoring when service is destroyed
+	stopMonitoring();
     }
 
     @Nullable
@@ -35,29 +46,9 @@ public class SpeedMonitoringService extends Service {
     // Fetch speed limit from Firebase
     private void fetchSpeedLimitFromFirebase(String renterId) {
 		renter.maxSpeedLimit = //Call Firebase API;
-        System.out.println("Speed limit fetched from Firebase: " + renter.maxSpeedLimit);
+        Log.d(TAG,"Speed limit fetched from Firebase: " + renter.maxSpeedLimit);
     }
-
-    // Simulate monitoring speed
-    private void monitorSpeed() {
-        new Thread(() -> {
-            while (true) {
-                double currentSpeed = getCurrentCarSpeed();
-                if (currentSpeed > renter.maxSpeedLimit) {
-                    sendSpeedAlert(currentSpeed);
-                }
-
-                // Sleep for 5 seconds before checking speed again
-                SystemClock.sleep(5000);
-            }
-        }).start();
-    }
-
-    // Simulate getting current speed (replace with actual speed data from AAOS)
-    private double getCurrentCarSpeed() {
-        return Math.random() * 150; // Simulate speed between 0 and 150 km/h
-    }
-
+	
     // Send a notification when the speed exceeds the limit
     private void sendSpeedAlert(double currentSpeed) {
         String messageToRenter = "Warning: Your speed is " + currentSpeed + " km/h, exceeding your limit of " + renter.maxSpeedLimit + " km/h.";
@@ -69,13 +60,56 @@ public class SpeedMonitoringService extends Service {
 
     // Send notification to the User
     private void sendUserNotificationToRenter(String message) {
-        System.out.println("Sending notification to renter: " + message);
+        Log.d(TAG,"Sending notification to renter: " + message);
 		//Using Notification Manager API send to notification to user.
     }
 
     // Send notification to the rental company using Firebase Cloud Messaging (FCM)
     private void sendUserNotificationToRentalCompany(String message) {
-        System.out.println("Sending notification to rental company: " + message);
+        Log.d(TAG,"Sending notification to rental company: " + message);
         // Call the Firebase API to send the notification to rental company
     }
+    // Generic function to fetch properties
+    private int getPropertyValue(int propertyId) {
+        if (carPropertyManager != null && carPropertyManager.isPropertyAvailable(propertyId)) {
+            CarPropertyValue<Integer> propValue = carPropertyManager.getProperty(Integer.class, propertyId);
+            return propValue.getValue();
+        }
+        return -1; // Return -1 if unavailable
+    }
+
+    // Listen for speed changes
+    public void registerSpeedListener() {
+        carPropertyManager.registerCallback(speedCallback, CarPropertyManager.VEHICLE_PROPERTY_IDS_SPEED, CarPropertyManager.SENSOR_RATE_ONCHANGE);
+    }
+
+    private final CarPropertyManager.CarPropertyEventCallback speedChangeListener = new CarPropertyManager.CarPropertyEventCallback() {
+        @Override
+        public void onChangeEvent(CarPropertyValue carPropertyValue) {
+            int speed = (int) carPropertyValue.getValue();
+            Log.d(TAG, "Speed Updated: " + speed + " km/h");
+
+            // Alert if speed crosses 80 km/h
+            if (speed > renter.maxSpeedLimit) {
+                Log.w(TAG, "⚠ Speed limit exceeded! Sending notification...");
+                // TODO: Send notification via Firebase or AWS
+		sendSpeedAlert(currentSpeed);    
+            }
+        }
+
+        @Override
+        public void onErrorEvent(int propertyId, int areaId) {
+            Log.e(TAG, "Error in Property: " + propertyId);
+        }
+    };
+
+    public void stopMonitoring() {
+        if (carPropertyManager != null) {
+            carPropertyManager.unregisterCallback(speedChangeListener);
+        }
+        if (car != null) {
+            car.disconnect();
+        }
+    }
+
 }
