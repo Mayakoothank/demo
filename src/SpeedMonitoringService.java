@@ -50,7 +50,7 @@ public class SpeedMonitoringService extends Service {
     }
 	
     // Send a notification when the speed exceeds the limit
-    private void sendSpeedAlert(double currentSpeed) {
+    private void sendSpeedAlert(float currentSpeed) {
         String messageToRenter = "Warning: Your speed is " + currentSpeed + " km/h, exceeding your limit of " + renter.maxSpeedLimit + " km/h.";
         sendUserNotificationToRenter(messageToRenter);
 
@@ -69,14 +69,6 @@ public class SpeedMonitoringService extends Service {
         Log.d(TAG,"Sending notification to rental company: " + message);
         // Call the Firebase API to send the notification to rental company
     }
-    // Generic function to fetch properties
-    private int getPropertyValue(int propertyId) {
-        if (carPropertyManager != null && carPropertyManager.isPropertyAvailable(propertyId)) {
-            CarPropertyValue<Integer> propValue = carPropertyManager.getProperty(Integer.class, propertyId);
-            return propValue.getValue();
-        }
-        return -1; // Return -1 if unavailable
-    }
 
     // Listen for speed changes
     public void registerSpeedListener() {
@@ -93,7 +85,7 @@ public class SpeedMonitoringService extends Service {
 	            if (speed > renter.maxSpeedLimit) {
 	                Log.w(TAG, "⚠ Speed limit exceeded! Sending notification...");
 	                // TODO: Send notification via Firebase or AWS
-			sendSpeedAlert(currentSpeed);    
+			sendSpeedAlert(speed);    
 	            }
 	    }		    
         }
