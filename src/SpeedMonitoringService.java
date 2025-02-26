@@ -80,21 +80,22 @@ public class SpeedMonitoringService extends Service {
 
     // Listen for speed changes
     public void registerSpeedListener() {
-        carPropertyManager.registerCallback(speedCallback, CarPropertyManager.VEHICLE_PROPERTY_IDS_SPEED, CarPropertyManager.SENSOR_RATE_ONCHANGE);
+        carPropertyManager.registerCallback(speedCallback, VehiclePropertyIds.PERF_VEHICLE_SPEED, CarPropertyManager.SENSOR_RATE_ONCHANGE);
     }
 
     private final CarPropertyManager.CarPropertyEventCallback speedChangeListener = new CarPropertyManager.CarPropertyEventCallback() {
         @Override
         public void onChangeEvent(CarPropertyValue carPropertyValue) {
-            int speed = (int) carPropertyValue.getValue();
-            Log.d(TAG, "Speed Updated: " + speed + " km/h");
-
-            // Alert if speed crosses 80 km/h
-            if (speed > renter.maxSpeedLimit) {
-                Log.w(TAG, "⚠ Speed limit exceeded! Sending notification...");
-                // TODO: Send notification via Firebase or AWS
-		sendSpeedAlert(currentSpeed);    
-            }
+	    if (value.getPropertyId() == VehiclePropertyIds.PERF_VEHICLE_SPEED) {	
+	            float speed = (float) carPropertyValue.getValue();
+	            Log.d(TAG, "Speed Updated: " + speed + " km/h");
+	            // Alert if speed crosses 80 km/h
+	            if (speed > renter.maxSpeedLimit) {
+	                Log.w(TAG, "⚠ Speed limit exceeded! Sending notification...");
+	                // TODO: Send notification via Firebase or AWS
+			sendSpeedAlert(currentSpeed);    
+	            }
+	    }		    
         }
 
         @Override
