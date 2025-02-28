@@ -10,6 +10,7 @@ public class SpeedMonitoringService extends Service {
     private Context context;
     private Renter renter;
     private static final String TAG = "SpeedMonitoringService";	
+    private boolean alertSent = false;	
 
     @Override
     public void onCreate() {
@@ -83,10 +84,16 @@ public class SpeedMonitoringService extends Service {
 	            Log.d(TAG, "Speed Updated: " + speed + " km/h");
 	            // Alert if speed crosses 80 km/h
 	            if (speed > renter.maxSpeedLimit) {
-	                Log.w(TAG, "⚠ Speed limit exceeded! Sending notification...");
 	                // TODO: Send notification via Firebase or AWS
-			sendSpeedAlert(speed);    
+			if (!alertSent) {    
+			sendSpeedAlert(speed);
+		        alertSent = true;		
+			Log.w(TAG, "Speed limit exceeded! Sending notification...");
+			}	
 	            }
+		    else {
+           		 alertSent = false;
+        	    }
 	    }		    
         }
 
